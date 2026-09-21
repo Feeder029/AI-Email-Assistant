@@ -46,7 +46,3 @@ Each email is saved with:
 * Summary
 * Action Required
 * Important Date
-
-## Purpose
-
-Built as a practice project for learning **AI automation, n8n workflows, local LLMs, and API integrations**.
