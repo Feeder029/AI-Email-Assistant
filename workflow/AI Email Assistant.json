@@ -1,0 +1,316 @@
+{
+  "name": "AI Email Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -608,
+        0
+      ],
+      "id": "7dbe9bef-bab1-4678-8722-701af37f2c92",
+      "name": "Gmail Trigger",
+      "retryOnFail": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_OAUTH2_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analyze the entire email and extract the information that is useful to the recipient.\n\nYour job is to determine:\n1. What the email is about and its important details.\n2. Whether the recipient is explicitly required or asked to do something.\n3. Any important dates, times, deadlines, appointments, or schedules.\n\nReturn exactly 3 lines:\n\nSUMMARY: <compact but complete summary>\nACTION: <specific action required, or None>\nDATE: <important date/time, or None>\n\nGENERAL RULES:\n- Read the ENTIRE email before producing the result.\n- Consider every sentence in the email, including the final sentence.\n- Extract information from the whole email, not just the beginning.\n- Use only information explicitly stated in the email.\n- Never invent, assume, or guess information.\n- Ignore greetings, compliments, emotional language, and casual expressions unless they contain useful information.\n- Keep the output concise while preserving important details.\n\nSUMMARY RULES:\n- Summarize the actual meaning and purpose of the email.\n- Include the main event, topic, request, announcement, or information.\n- Include important WHO information when relevant.\n- Include important WHAT information.\n- Include important WHEN information.\n- Include important WHERE information.\n- Include relevant instructions, conditions, deadlines, or other details.\n- Do not summarize only the tone or style of the email.\n- Do not describe the sender as affectionate, casual, formal, angry, friendly, etc.\n- Do not omit important details just because they appear later in the email.\n- The summary should allow the recipient to understand the important content without rereading the original email.\n- Keep it compact rather than unnecessarily long.\n\nACTION RULES:\n- Read the entire email specifically looking for something the recipient is asked, instructed, expected, or required to do.\n- An action can be a request, command, instruction, question requiring a response, confirmation, task, or other explicit request directed at the recipient.\n- If the sender explicitly asks the recipient to do something, include that action.\n- Look for explicit requests anywhere in the email, including the final sentence.\n- Words such as \"please\", \"can you\", \"could you\", \"would you\", \"reply\", \"respond\", \"send\", \"confirm\", \"bring\", \"call\", \"contact\", \"submit\", \"complete\", \"check\", \"provide\", \"let me know\", and similar wording can indicate an action, but determine the action from the actual context.\n- Include the specific thing the recipient needs to do.\n- Include a deadline or time for the action if explicitly stated.\n- If multiple explicit actions are required, include all of them concisely.\n- Do not invent an action.\n- Do not treat an event, appointment, invitation, announcement, or piece of information as an action unless the sender explicitly asks the recipient to do something.\n- Do not assume that the recipient must attend an event simply because an event is mentioned.\n- If there is no explicit action requested or required anywhere in the email, use None.\n- If an explicit action exists anywhere in the email, do NOT use None.\n\nDATE RULES:\n- Extract important dates and times from the entire email.\n- Include dates, times, deadlines, appointments, meetings, events, schedules, or other time-related information that is important to the email.\n- Copy dates and times exactly as written.\n- NEVER change AM to PM or PM to AM.\n- NEVER convert, calculate, or guess a time.\n- NEVER invent a date.\n- Relative dates such as \"today\", \"tomorrow\", \"yesterday\", \"next week\", and similar expressions should remain exactly as written.\n- If multiple important dates or times are mentioned, include them concisely.\n- If no important date or time is present, use None.\n\nOUTPUT RULES:\n- Return ONLY the following 3 lines.\n- Do not add explanations.\n- Do not add markdown.\n- Do not add bullet points.\n- Do not add extra lines.\n- Do not change the field names.\n- Do not put quotation marks around the entire response.\n\nRequired format:\n\nSUMMARY: ...\nACTION: ...\nDATE: ...\n\nEmail:\n{{ $json.emailBody }}",
+        "messages": {
+          "messageValues": []
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        112,
+        0
+      ],
+      "id": "bdacd64c-1d79-48a4-954e-8e4d728f1bc9",
+      "name": "Basic LLM Chain",
+      "executeOnce": false,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "model": "=llama3.2:3b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        112,
+        176
+      ],
+      "id": "9dc7ef67-0a0f-4311-9ab6-df13f3d1c8b4",
+      "name": "Ollama Chat Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "YOUR_OLLAMA_API_CREDENTIAL_ID",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "simple": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -288,
+        0
+      ],
+      "id": "c102eb0a-3912-4a61-857f-a5f4944c679b",
+      "name": "Get a message",
+      "webhookId": "b1d47c6c-fdce-4294-a176-00b64ee081a6",
+      "retryOnFail": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_GMAIL_OAUTH2_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const html = $json.html || '';\n\nconst text = html\n  .replace(/<style[\\s\\S]*?<\\/style>/gi, '')\n  .replace(/<script[\\s\\S]*?<\\/script>/gi, '')\n  .replace(/<[^>]+>/g, ' ')\n  .replace(/&nbsp;/gi, ' ')\n  .replace(/&amp;/gi, '&')\n  .replace(/&lt;/gi, '<')\n  .replace(/&gt;/gi, '>')\n  .replace(/\\s+/g, ' ')\n  .trim();\n\nconst rawDate = $json.internalDate || $json.date || '';\n\nlet dateSent = '';\n\nif (rawDate) {\n  const date = new Date(rawDate);\n\n  dateSent = date.toLocaleString('en-PH', {\n    timeZone: 'Asia/Manila',\n    year: 'numeric',\n    month: '2-digit',\n    day: '2-digit',\n    hour: '2-digit',\n    minute: '2-digit',\n    second: '2-digit',\n    hour12: true\n  });\n}\n\nreturn [\n  {\n    json: {\n      emailBody: text,\n      emailId: $json.id || '',\n      messageId: $json.messageId || '',\n      senderName: $json.from?.value?.[0]?.name || '',\n      senderEmail: $json.from?.value?.[0]?.address || '',\n      subject: $json.subject || '',\n      dateSent\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        0
+      ],
+      "id": "6f871756-2684-4da9-bc5e-8bd1e7937556",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const text = $json.text || '';\n\nconst summary = text.match(/SUMMARY:\\s*(.*)/i)?.[1]?.trim() || 'None';\nconst action = text.match(/ACTION:\\s*(.*)/i)?.[1]?.trim() || 'None';\nconst date = text.match(/DATE:\\s*(.*)/i)?.[1]?.trim() || 'None';\n\nreturn [\n  {\n    json: {\n      summary,\n      action_required: action,\n      important_date: date\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        0
+      ],
+      "id": "9dbf6704-597e-43af-b38b-766a0fadd50e",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Summarized Email",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Action Required": "={{ $json.action_required }}",
+            "Important Date": "={{ $json.important_date }}",
+            "Summary": "={{ $json.summary }}",
+            "Sender": "={{ $('Code in JavaScript').item.json.senderEmail }}",
+            "Subject": "={{ $('Code in JavaScript').item.json.subject }}",
+            "Received": "={{ $('Code in JavaScript').item.json.dateSent }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Received",
+              "displayName": "Received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Sender",
+              "displayName": "Sender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Subject",
+              "displayName": "Subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Action Required",
+              "displayName": "Action Required",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Important Date",
+              "displayName": "Important Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "useAppend": true
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        720,
+        0
+      ],
+      "id": "f4b9442a-477b-4789-adfb-230a91e42959",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_OAUTH2_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "59c062f1-3fa5-4fca-9248-18a1b9896826",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b4f11c651ceb5c112dc29f4ecbcdf7c27997a4b2e1f7ac2d46efb7b6a8bf9564"
+  },
+  "nodeGroups": [],
+  "id": "3CLCFYROzaWlfOoX",
+  "tags": []
+}
