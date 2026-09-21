@@ -45,4 +45,4 @@ Each email is saved with:
 * Received date
 * Summary
 * Action Required
-* Important Date
+* Important Event
